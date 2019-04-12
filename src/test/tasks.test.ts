@@ -5,7 +5,7 @@
 //
 
 import * as assert from 'assert';
-import * as fs from 'original-fs';
+import * as fs from 'fs';
 import * as path from 'path';
 import { commands, workspace } from 'vscode';
 import * as testUtil from './testUtil';
