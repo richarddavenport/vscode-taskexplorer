@@ -5,7 +5,8 @@
 
 import {
     commands, Disposable, ExtensionContext, OutputChannel, Uri, TreeView, TreeItem,
-    workspace, window, FileSystemWatcher, ConfigurationChangeEvent,
+    workspace, window, FileSystemWatcher, ConfigurationChangeEvent, StatusBarItem,
+    StatusBarAlignment, tasks, Task
 } from 'vscode';
 import { TaskTreeDataProvider } from './taskTree';
 import { AntTaskProvider } from './taskProviderAnt';
@@ -15,13 +16,15 @@ import { GradleTaskProvider } from './taskProviderGradle';
 import { GruntTaskProvider } from './taskProviderGrunt';
 import { GulpTaskProvider } from './taskProviderGulp';
 import { configuration } from './common/configuration';
-import { log } from './util';
+import { log, removeFromArray } from './util';
+import { utils } from 'mocha';
 
 export let treeDataProvider: TaskTreeDataProvider | undefined;
 export let treeDataProvider2: TaskTreeDataProvider | undefined;
 export let logOutputChannel: OutputChannel | undefined;
 export let views: Map<String, TreeView<TreeItem>> = new Map();
 let watchers: Map<String, FileSystemWatcher> = new Map();
+let statusBarItem: StatusBarItem;
 
 
 export async function activate(context: ExtensionContext, disposables: Disposable[]) 
@@ -75,7 +78,73 @@ export async function activate(context: ExtensionContext, disposables: Disposabl
     });
     context.subscriptions.push(d);
 
+    //
+    // create a new status bar item that we can now manage
+    //
+    const commandId = 'taskExplorer.showRunningTasks';
+	context.subscriptions.push(commands.registerCommand(commandId, () => showStatusBarTasks()));
+    
+	statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 50);
+    statusBarItem.command = commandId;
+    statusBarItem.text = '$(gear) Task Explorer';
+    statusBarItem.show();
+	context.subscriptions.push(statusBarItem);
+
+	// register some listener that make sure the status bar 
+	// item always up-to-date
+	context.subscriptions.push(tasks.onDidStartTask((_e) => updateStatusBarItem(_e.execution.task, true)));
+	context.subscriptions.push(tasks.onDidEndTask((_e) => updateStatusBarItem(_e.execution.task, false)));
+
     log('   Task Explorer activated');
+}
+
+
+let runningTasks: Task[] = [];
+
+function updateStatusBarItem(task: Task, running: Boolean): void 
+{
+    if (task.definition.type === "$composite") {
+        return;
+    }
+
+	if (!running) {
+        removeFromArray(runningTasks, task);
+    } 
+    else {
+        runningTasks.push(task);
+    }
+
+    if (!runningTasks.length) {
+		statusBarItem.text = '$(gear) Task Explorer';
+    } 
+    else if (runningTasks.length === 1) {
+        statusBarItem.text = '$(gear) 1 task running';
+    }
+    else {
+        statusBarItem.text = '$(gear) ' + runningTasks.length.toString() + ' tasks running';	
+    }
+}
+
+
+function showStatusBarTasks(): void 
+{
+    let msg: string = "";
+
+    if (!runningTasks.length) {
+		msg = '0 tasks running';
+    } 
+    else if (runningTasks.length === 1) {
+        msg = '1 task running - ';
+    }
+    else {
+        msg = runningTasks.length.toString() + ' tasks running - ';	
+    }
+
+    runningTasks.forEach(each => {
+        msg += (" " + each.definition.path + (each.definition.fileName ? each.definition.fileName + '/' : '') + each.name);
+    });
+    
+    window.showInformationMessage(msg);
 }
 
 
