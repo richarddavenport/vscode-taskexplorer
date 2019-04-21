@@ -6,6 +6,8 @@
     "version": "1.15.0",
     "publisher": "spmeesseman",
     "license": "AGPL-3.0+",
+    "private": true,
+    "enableProposedApi": false,
     "repository": {
         "type": "git",
         "url": "https://github.com/spmeesseman/vscode-taskexplorer.git"

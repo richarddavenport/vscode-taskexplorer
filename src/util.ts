@@ -1,11 +1,61 @@
 import { logOutputChannel } from './extension';
-import { workspace, RelativePattern, WorkspaceFolder } from 'vscode';
+import { workspace, RelativePattern, WorkspaceFolder, window, commands } from 'vscode';
 import { accessSync } from 'original-fs';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as minimatch from 'minimatch';
 import { configuration } from './common/configuration';
 
 const logValueWhiteSpace = 40;
+
+export interface IDisposable 
+{
+    dispose(): void;
+}
+
+export function done<T>(promise: Promise<T>): Promise<void> 
+{
+    return promise.then<void>(() => void 0);
+}
+
+export function dispose(disposables: any[]): any[] 
+{
+    disposables.forEach(disposable => disposable.dispose());
+  
+    return [];
+}
+  
+export function combinedDisposable(disposables: IDisposable[]): IDisposable 
+{
+    return toDisposable(() => dispose(disposables));
+}
+  
+export function toDisposable(dispose: () => void): IDisposable
+{
+    return { dispose };
+}
+
+export function isDescendant(parent: string, descendant: string): boolean 
+{
+    parent = parent.replace(/[\\\/]/g, path.sep);
+    descendant = descendant.replace(/[\\\/]/g, path.sep);
+  
+    // IF Windows
+    if (path.sep === "\\") {
+      parent = parent.replace(/^\\/, "").toLowerCase();
+      descendant = descendant.replace(/^\\/, "").toLowerCase();
+    }
+  
+    if (parent === descendant) {
+      return true;
+    }
+  
+    if (parent.charAt(parent.length - 1) !== path.sep) {
+      parent += path.sep;
+    }
+  
+    return descendant.startsWith(parent);
+}
 
 
 export function camelCase(name: string, indexUpper: number) 
@@ -153,6 +203,36 @@ export async function removeFromArray(arr: any[], item: any)
 		arr.splice(idx2, 1);
 	}
 }
+
+
+let hasDecorationProvider = false;
+export function hasSupportToDecorationProvider() {
+  return hasDecorationProvider;
+}
+
+try {
+  const fake = {
+    onDidChangeDecorations: (value: any): any => toDisposable(() => {}),
+    provideDecoration: (uri: any, token: any): any => {}
+  };
+  const disposable = window.registerDecorationProvider(fake);
+  hasDecorationProvider = true;
+  // disposable.dispose(); // Not dispose to prevent: Cannot read property 'provideDecoration' of undefined
+} catch (error) {}
+
+let hasRegisterDiffCommand = false;
+export function hasSupportToRegisterDiffCommand() {
+  return hasRegisterDiffCommand;
+}
+
+try {
+  const disposable = commands.registerDiffInformationCommand(
+    "svn.testDiff",
+    () => {}
+  );
+  hasRegisterDiffCommand = true;
+  disposable.dispose();
+} catch (error) {}
 
 
 export async function log(msg: string, level?: number) 

@@ -16,6 +16,12 @@ import { GruntTaskProvider } from './taskProviderGrunt';
 import { GulpTaskProvider } from './taskProviderGulp';
 import { configuration } from './common/configuration';
 import { log } from './util';
+import Decorations from "./decorations/decorations";
+import {
+    hasSupportToDecorationProvider,
+    hasSupportToRegisterDiffCommand,
+    toDisposable
+  } from "./util";
 
 export let treeDataProvider: TaskTreeDataProvider | undefined;
 export let treeDataProvider2: TaskTreeDataProvider | undefined;
@@ -60,6 +66,18 @@ export async function activate(context: ExtensionContext, disposables: Disposabl
     // Register file type watchers
     //
     registerFileWatchers(context);
+
+    // First, check the vscode has support to DecorationProvider
+    if (hasSupportToDecorationProvider()) {
+        const decoration = new Decorations();
+        disposables.push(decoration);
+    }
+
+    commands.executeCommand(
+        "setContext",
+        "taskExplorersSupportToRegisterDiffCommand",
+        hasSupportToRegisterDiffCommand() ? "1" : "0"
+    );
 
     //
     // Refresh tree when folders are added/removed from the workspace
