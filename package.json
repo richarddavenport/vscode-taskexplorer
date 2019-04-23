@@ -489,6 +489,15 @@
                     "default": 1,
                     "description": "%config.taskExplorer.debugLevel%"
                 },
+                "taskExplorer.scriptArgs": {
+                    "type": [
+                        "array"
+                    ],
+                    "items": {
+                        "type": "object"
+                    },
+                    "default": []
+                },
                 "taskExplorer.exclude": {
                     "type": [
                         "string",

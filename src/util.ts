@@ -190,6 +190,9 @@ export async function logValue(msg: string, value: any, level?: number)
     else if (value === null) {
         logMsg += ': null';
     }
+    else if (value === false) {
+        logMsg += ': false';
+    }
 
     if (workspace.getConfiguration('taskExplorer').get('debug') === true) {
         logOutputChannel.appendLine(logMsg);

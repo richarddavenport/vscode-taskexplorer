@@ -13,7 +13,7 @@ export class TaskItem extends TreeItem
 {
 	public static readonly defaultSource = "Workspace";
 
-    public readonly task: Task | undefined;
+    public task: Task | undefined;
     public readonly taskSource: string;
 	public readonly execution: TaskExecution | undefined;
 
@@ -42,7 +42,7 @@ export class TaskItem extends TreeItem
 		this.contextValue = this.execution && task.definition.type !== "$composite" ? 
 		                      "runningScript" : (!task.definition.scriptFile ? 'script' : 'scriptFile');
 
-		if (this.execution&& task.definition.type !== "$composite") {
+		if (this.execution && task.definition.type !== "$composite") {
 			this.iconPath = {
 				light: context.asAbsolutePath(path.join('res', 'light', 'loading.svg')),
 				dark: context.asAbsolutePath(path.join('res', 'dark', 'loading.svg'))

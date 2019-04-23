@@ -7,8 +7,8 @@ import * as path from 'path';
 import * as util from './util';
 
 import {
-	Event, EventEmitter, ExtensionContext, Task, TaskDefinition,
-	TextDocument, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri,
+	Event, EventEmitter, ExtensionContext, Task, TaskDefinition, QuickPickOptions,
+	TextDocument, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri, ShellExecutionOptions,
 	commands, window, workspace, tasks, Selection, WorkspaceFolder, InputBoxOptions,
 	CancellationToken, ShellExecution, TaskStartEvent, TaskEndEvent, TaskExecution
 } from 'vscode';
@@ -123,34 +123,127 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 	private async runWithArgs(taskItem: TaskItem)
 	{
 		//
-		// If this is a script, run with args
+		// If this isnt a script type task item, return
 		//
 		if (!taskItem.task.definition.scriptFile) {
 			return;
 		}
 
-		let opts: InputBoxOptions = { prompt: 'Enter command line arguments separated by spaces'};
-		window.showInputBox(opts).then(function(str)
+		let scope = taskItem.task.scope;
+
+		function runScript(str: string, cache: Array<any>)
 		{
 			if (str !== undefined)
 			{
-				//let origArgs = taskItem.task.execution.args ? taskItem.task.execution.args.slice(0) : []; // clone
-				if (str) {
-					//origArgs.push(...str.split(' '));
-					taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
+				if (str === "Enter new...")
+				{
+					getArgsAndRun(cache);
 				}
-				else {
-					taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine, taskItem.task.execution.options);
+				else if (str)
+				{
+					//taskItem.task.definition.cmdLine = ' ' + str;
+
+					let origArgs = [];
+					if (!taskItem.task.execution.args) {
+						taskItem.task.execution.args = [];
+					}
+					else {
+						origArgs.push(...taskItem.task.execution.args);
+					}
+					taskItem.task.execution.args.push(...str.split(' '));console.log(taskItem.task.execution.args);
+					//let shellOpts: ShellExecutionOptions;
+					//shellOpts.
+					//	taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
+
+					//	let execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
+					//	taskItem.task = new Task(taskItem.task.definition, taskItem.task.scope, taskItem.task.name, taskItem.task.source, execution, undefined);
+
+					tasks.executeTask(taskItem.task)
+					.then(function(execution) { taskItem.task.execution.args = origArgs; },
+					function(reason) { taskItem.task.execution.args = origArgs; });
 				}
-				tasks.executeTask(taskItem.task)
-				.then(function(execution) {
-					//taskItem.task.execution.args = origArgs.slice(0); // clone
-				},
-				function(reason) {
-					//taskItem.task.execution.args = origArgs.slice(0); // clone
-				});
+			}
+		}
+
+		function getArgsAndRun(cache: Array<any>)
+		{
+			let optsIb: InputBoxOptions = { prompt: 'Enter command line arguments separated by spaces'};
+			window.showInputBox(optsIb).then(function(str)
+			{
+				if (str) 
+				{
+					let saveArg = true;
+					let saveTask = true;
+
+					cache.forEach(each =>
+					{
+						if (each.script === taskItem.task.definition.uri.path)
+						{
+							saveTask = false;
+							each.args.forEach(eacharg =>
+							{
+								if (eacharg === str) {
+									saveArg = false;
+									return;
+								}
+							});
+						}
+					});
+
+					if (saveTask)
+					{
+						cache.push({
+							"script": taskItem.task.definition.uri.path,
+							"args": [
+								str
+							]
+						});
+						configuration.update("scriptArgs", cache);
+					}
+					else if (saveArg)
+					{
+						cache.forEach(each =>
+						{
+							if (each.script === taskItem.task.definition.uri.path)
+							{
+								each.args.push(str);
+								return;
+							}
+						});
+						configuration.update("scriptArgs", cache);
+					}
+
+					runScript(str, cache);
+				}
+			});
+		}
+
+		let cachedArgs = [ "Enter new..." ];
+		let argCache: Array<any> = configuration.get<Array<any>>("scriptArgs");
+		if (!argCache) {
+			argCache = [];
+		}
+		
+		argCache.forEach(each =>
+		{
+			if (each.script === taskItem.task.definition.uri.path) {
+				if (each.args && each.args.length > 0) {
+					cachedArgs.push(...each.args);
+				}
 			}
 		});
+
+		if (cachedArgs.length > 1)
+		{
+			let optsQp: QuickPickOptions = { canPickMany: false};
+			window.showQuickPick(cachedArgs, optsQp).then(function(value: string)
+			{
+				runScript(value, argCache);
+			});
+		}
+		else {
+			getArgsAndRun(argCache);
+		}
 	}
 
 
@@ -618,6 +711,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 			else {
 				util.log('   Skipping');
 				util.logValue('   enabled', configuration.get(settingName));
+				util.logValue('   is workspace folder', this.isWorkspaceFolder(each.scope));
 				util.logValue('   is install task', this.isInstallTask(each));
 			}
 		});
