@@ -44,6 +44,7 @@
 	"view.name": "Task Explorer",
 	"command.refresh": "Refresh",
 	"command.run": "Run",
+	"command.runWithArgs": "Run with Args",
 	"command.stop": "Stop",
 	"command.debug": "Debug",
 	"command.open": "Open",

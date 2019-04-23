@@ -5,6 +5,7 @@ import {
 	WorkspaceFolder, tasks
 } from 'vscode';
 import { TaskFile } from './taskFile';
+import { properCase } from './util';
 import * as path from 'path';
 
 
@@ -28,7 +29,6 @@ export class TaskItem extends TreeItem
 
 		super(taskName, TreeItemCollapsibleState.None);
 
-		this.contextValue = 'script';
 		this.taskFile = taskFile;
 		this.task = task;
 		this.command = {
@@ -39,9 +39,10 @@ export class TaskItem extends TreeItem
 		this.taskSource = task.source;
         this.execution = tasks.taskExecutions.find(e => e.task.name === task.name && e.task.source === task.source);
 			
-		this.contextValue = this.execution && task.definition.type !=="$composite" ? "runningScript" : "script";
+		this.contextValue = this.execution && task.definition.type !== "$composite" ? 
+		                      "runningScript" : (!task.definition.scriptFile ? 'script' : 'scriptFile');
 
-		if (this.execution&& task.definition.type !=="$composite") {
+		if (this.execution&& task.definition.type !== "$composite") {
 			this.iconPath = {
 				light: context.asAbsolutePath(path.join('res', 'light', 'loading.svg')),
 				dark: context.asAbsolutePath(path.join('res', 'dark', 'loading.svg'))

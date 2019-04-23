@@ -54,6 +54,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 		this.extensionContext = context;
 		this.name = name;
 		subscriptions.push(commands.registerCommand(name + '.run', this.run, this));
+		subscriptions.push(commands.registerCommand(name + '.runWithArgs', this.runWithArgs, this));
 		subscriptions.push(commands.registerCommand(name + '.stop', (taskTreeItem: TaskItem) =>
 		{
             if (taskTreeItem.execution) {
@@ -115,45 +116,41 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 
 	private async run(taskItem: TaskItem)
 	{
+		tasks.executeTask(taskItem.task);
+	}
+
+
+	private async runWithArgs(taskItem: TaskItem)
+	{
 		//
-		// If this is a script, check to see if args are required
+		// If this is a script, run with args
 		//
-		// A script task will set the 'requiresArgs' parameter to true if command line arg
-		// parameters are detected in the scripts contents when inported.  For example, if a
-		// batch script contains %1, %2, etc, the task definition's requiresArgs parameter
-		// will be set.
-		//
-		if (taskItem.task.definition.requiresArgs === true)
+		if (!taskItem.task.definition.scriptFile) {
+			return;
+		}
+
+		let opts: InputBoxOptions = { prompt: 'Enter command line arguments separated by spaces'};
+		window.showInputBox(opts).then(function(str)
 		{
-			let opts: InputBoxOptions = { prompt: 'Enter command line arguments separated by spaces'};
-			window.showInputBox(opts).then(function(str)
+			if (str !== undefined)
 			{
-				if (str !== undefined)
-				{
-					//let origArgs = taskItem.task.execution.args ? taskItem.task.execution.args.slice(0) : []; // clone
-					if (str) {
-						//origArgs.push(...str.split(' '));
-						taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
-					}
-					else {
-						taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine, taskItem.task.execution.options);
-					}
-					tasks.executeTask(taskItem.task)
-					.then(function(execution) {
-						//taskItem.task.execution.args = origArgs.slice(0); // clone
-					},
-					function(reason) {
-						//taskItem.task.execution.args = origArgs.slice(0); // clone
-					});
+				//let origArgs = taskItem.task.execution.args ? taskItem.task.execution.args.slice(0) : []; // clone
+				if (str) {
+					//origArgs.push(...str.split(' '));
+					taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
 				}
-			});
-		}
-		else
-		{
-			// Execute task
-			//
-			tasks.executeTask(taskItem.task);
-		}
+				else {
+					taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine, taskItem.task.execution.options);
+				}
+				tasks.executeTask(taskItem.task)
+				.then(function(execution) {
+					//taskItem.task.execution.args = origArgs.slice(0); // clone
+				},
+				function(reason) {
+					//taskItem.task.execution.args = origArgs.slice(0); // clone
+				});
+			}
+		});
 	}
 
 
