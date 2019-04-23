@@ -141,7 +141,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 				}
 				else if (str)
 				{
-					//taskItem.task.definition.cmdLine = ' ' + str;
+					taskItem.task.definition.cmdLine += ' ' + str;
 
 					let origArgs = [];
 					if (!taskItem.task.execution.args) {
@@ -150,17 +150,25 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 					else {
 						origArgs.push(...taskItem.task.execution.args);
 					}
-					taskItem.task.execution.args.push(...str.split(' '));console.log(taskItem.task.execution.args);
-					//let shellOpts: ShellExecutionOptions;
-					//shellOpts.
-					//	taskItem.task.execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
+					//taskItem.task.execution.args.push(...str.split(' '));console.log(taskItem.task.execution.args);
 
-					//	let execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
-					//	taskItem.task = new Task(taskItem.task.definition, taskItem.task.scope, taskItem.task.name, taskItem.task.source, execution, undefined);
+					//let shellOpts: ShellExecutionOptions;
+					//let exec = taskItem.task.execution;
+					//let execution  = new ShellExecution(taskItem.task.definition.cmdLine + ' ' + str, taskItem.task.execution.options);
+
+					//taskItem.task.execution  = execution;
+
+					//
+					//let task = new Task(taskItem.task.definition, taskItem.task.scope, taskItem.task.name, taskItem.task.source, execution, undefined);
+					(taskItem.task.execution as any).commandLine = taskItem.task.definition.cmdLine;
 
 					tasks.executeTask(taskItem.task)
-					.then(function(execution) { taskItem.task.execution.args = origArgs; },
-					function(reason) { taskItem.task.execution.args = origArgs; });
+					.then(function(execution) { 
+						taskItem.task.execution.args = origArgs; 
+					},
+					function(reason) { 
+						taskItem.task.execution.args = origArgs; 
+					});
 				}
 			}
 		}

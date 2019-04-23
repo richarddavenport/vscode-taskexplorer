@@ -215,15 +215,15 @@ function createScriptTask(scriptDef: any, folder: WorkspaceFolder, uri: Uri): Ta
 		"cwd": cwd
 	};
 
-	let args:string[] = [];
-	let exec = kind.cmdLine;
+	//let args:string[] = [];
+	//let exec = kind.cmdLine;
 
 	//
 	// Add any defined arguments to the command line for the script type
 	//
 	if (scriptDef.args)
 	{
-		args.push(...scriptDef.args);
+		//args.push(...scriptDef.args);
 		for (var i = 0; i < scriptDef.args.length; i++) {
 			kind.cmdLine += ' ';
 			kind.cmdLine += scriptDef.args[i];
@@ -234,16 +234,16 @@ function createScriptTask(scriptDef: any, folder: WorkspaceFolder, uri: Uri): Ta
 	// Add the file name to the command line following the exec.  Quote if ecessary.  Prepend './' as
 	// powershell script requires this
 	//
-	args.push(fileName.indexOf(" ") !== -1 ? "\"" + '.' + sep + fileName + "\"" : '.' + sep + fileName);
+	//args.push(fileName.indexOf(" ") !== -1 ? "\"" + '.' + sep + fileName + "\"" : '.' + sep + fileName);
 	kind.cmdLine += ' ';
 	kind.cmdLine += (fileName.indexOf(" ") !== -1 ? "\"" + '.' + sep + fileName + "\"" : '.' + sep + fileName);
 
 	//
 	// Create the shell execution object
 	//
-	//let execution = new ShellExecution(kind.cmdLine, options);
+	let execution = new ShellExecution(kind.cmdLine, options);
 	//console.log(exec);console.log(kind);
-	let execution = new ShellExecution(exec, args, options);
+	//let execution = new ShellExecution(exec, args, options);
 
 	return new Task(kind, folder, fileName, scriptDef.type, execution, undefined);
 }
