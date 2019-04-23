@@ -20,6 +20,7 @@
 	"config.taskExplorer.enablePowershell": "Enable/show powershell scripts as tasks.",
 	"config.taskExplorer.enableMake": "Enable/show makefiles as tasks.",
 	"config.taskExplorer.enableTsc": "Enable/show tsc node with npm tasks.",
+	"config.taskExplorer.enableYarn": "Enable/show yarn node with package.json script tasks.",
 	"config.taskExplorer.enableAnsiconForAnt": "Enable ansicon output colorization for ant tasks.",
 	"config.taskExplorer.enableSideBar": "Add a task explorer to the the sidebar.",
 	"config.taskExplorer.enableExplorerView": "Add a task explorer tray in the Explorer sidebar view.",

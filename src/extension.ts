@@ -14,6 +14,7 @@ import { ScriptTaskProvider } from './taskProviderScript';
 import { GradleTaskProvider } from './taskProviderGradle';
 import { GruntTaskProvider } from './taskProviderGrunt';
 import { GulpTaskProvider } from './taskProviderGulp';
+import { YarnTaskProvider } from './taskProviderYarn';
 import { configuration } from './common/configuration';
 import { log } from './util';
 
@@ -81,7 +82,7 @@ export async function activate(context: ExtensionContext, disposables: Disposabl
 
 function processConfigChanges(context: ExtensionContext, e: ConfigurationChangeEvent) 
 {
-    let refresh: boolean;
+    let refresh: boolean = false;
 
     if (e.affectsConfiguration('taskExplorer.exclude')) {
         refresh = true;
@@ -122,7 +123,7 @@ function processConfigChanges(context: ExtensionContext, e: ConfigurationChangeE
         refresh = true;
     }
 
-    if (e.affectsConfiguration('taskExplorer.enableNpm')) {
+    if (e.affectsConfiguration('taskExplorer.enableNpm') || configuration.get<boolean>('enableYarn')) {
         registerFileWatcher(context, 'npm', '**/package.json', false, configuration.get<boolean>('enableNpm'));
         refresh = true;
     }
@@ -219,7 +220,7 @@ function registerFileWatchers(context: ExtensionContext)
         registerFileWatcher(context, 'bash', '**/Makefile');
     }
 
-    if (configuration.get<boolean>('enableNpm')) {
+    if (configuration.get<boolean>('enableNpm') || configuration.get<boolean>('enableYarn')) {
         registerFileWatcher(context, 'npm', '**/package.json');
     }
 
@@ -278,6 +279,7 @@ function registerTaskProviders(context: ExtensionContext)
     context.subscriptions.push(workspace.registerTaskProvider('grunt', new GruntTaskProvider()));
     context.subscriptions.push(workspace.registerTaskProvider('gulp', new GulpTaskProvider()));
     context.subscriptions.push(workspace.registerTaskProvider('gradle', new GradleTaskProvider()));
+    context.subscriptions.push(workspace.registerTaskProvider('yarn', new YarnTaskProvider()));
 }
 
 

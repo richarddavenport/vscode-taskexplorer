@@ -367,6 +367,11 @@
                     "default": true,
                     "description": "%config.taskExplorer.enableWorkspace%"
                 },
+                "taskExplorer.enableYarn": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "%config.taskExplorer.enableYarn%"
+                },
                 "taskExplorer.enableAnsiconForAnt": {
                     "type": "boolean",
                     "default": true,
