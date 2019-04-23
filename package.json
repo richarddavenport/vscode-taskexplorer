@@ -246,7 +246,7 @@
                 {
                     "command": "taskExplorer.runInstall",
                     "when": "config.taskExplorer.enableExplorerView && view == taskExplorer && viewItem == taskFileNpm",
-                    "group": "navigation@2"
+                    "group": "navigation@1"
                 },
                 {
                     "command": "taskExplorer.open",
@@ -320,12 +320,12 @@
                 },
                 {
                     "command": "taskExplorerSideBar.runWithArgs",
-                    "when": "config.taskExplorer.enableSideBar && view == taskExplorer && viewItem == scriptFile",
+                    "when": "config.taskExplorer.enableSideBar && view == taskExplorerSideBar && viewItem == scriptFile",
                     "group": "navigation@3"
                 },
                 {
                     "command": "taskExplorerSideBar.runWithArgs",
-                    "when": "config.taskExplorer.enableSideBar && view == taskExplorer && viewItem == scriptFile",
+                    "when": "config.taskExplorer.enableSideBar && view == taskExplorerSideBar && viewItem == scriptFile",
                     "group": "inline@1"
                 },
                 {
