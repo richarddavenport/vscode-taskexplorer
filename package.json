@@ -283,6 +283,15 @@
                 }
             },
             {
+                "command": "taskExplorer.addToBookmarks",
+                "title": "Bookmark",
+                "when": "config.taskExplorer.enableExplorerView",
+                "icon": {
+                    "light": "res/light/refresh.svg",
+                    "dark": "res/dark/refresh.svg"
+                }
+            },
+            {
                 "command": "taskExplorer.runLastTask",
                 "title": "%command.runLastTask%",
                 "when": "config.taskExplorer.enableExplorerView",
@@ -579,6 +588,10 @@
                 {
                     "command": "taskExplorer.stop",
                     "when": "config.taskExplorer.enableExplorerView && view == taskExplorer && viewItem == runningScript",
+                    "group": "inline"
+                },
+                {
+                    "command": "taskExplorer.addToBookmarks",
                     "group": "inline"
                 },
                 {

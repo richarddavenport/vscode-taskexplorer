@@ -10,7 +10,7 @@ import {
     Event, EventEmitter, ExtensionContext, Task, TaskDefinition,
     TextDocument, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri,
     commands, window, workspace, tasks, Selection, WorkspaceFolder, InputBoxOptions,
-    ShellExecution, Terminal, StatusBarItem, StatusBarAlignment
+    ShellExecution, Terminal, StatusBarItem, StatusBarAlignment, TaskRevealKind
 } from "vscode";
 import { visit, JSONVisitor } from "jsonc-parser";
 import * as nls from "vscode-nls";
@@ -75,6 +75,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
         subscriptions.push(commands.registerCommand(name + ".runAudit", async (taskFile: TaskFile) => { await this.runNpmCommand(taskFile, "audit"); }, this));
         subscriptions.push(commands.registerCommand(name + ".runAuditFix", async (taskFile: TaskFile) => { await this.runNpmCommand(taskFile, "audit fix"); }, this));
         subscriptions.push(commands.registerCommand(name + ".addToExcludes", async (taskFile: TaskFile | string, global: boolean, prompt: boolean) => { await this.addToExcludes(taskFile, global, prompt); }, this));
+        subscriptions.push(commands.registerCommand(name + ".addToBookmarks", async (item: TaskItem) => { await this.addToBookmarks(item); }, this));
 
         tasks.onDidStartTask((_e) => this.refresh(false, _e.execution.task.definition.uri, _e.execution.task));
         tasks.onDidEndTask((_e) => this.refresh(false, _e.execution.task.definition.uri, _e.execution.task));
@@ -605,6 +606,8 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
     }
 
 
+    // TODO: mine
+    // TaskItems can be created here
     public async showLastTasks(show: boolean, taskItem?: TaskItem, logPad = "")
     {
         let changed = true;
@@ -958,6 +961,14 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
         else {
             await saveExclude(pathValue);
         }
+    }
+
+
+    private async addToBookmarks(item: TaskItem) {
+        // const currentBookmarks = configuration.get<string[]>("bookmarks");
+        // if (!util.existsInArray(currentBookmarks, item)) {
+        //     currentBookmarks.push(item);
+        // }
     }
 
 
@@ -1331,12 +1342,16 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
     private buildTaskTree(tasks: Task[]): TaskFolder[] | NoScripts[]
     {
         let taskCt = 0;
-        const folders: Map<string, TaskFolder> = new Map();
-        const files: Map<string, TaskFile> = new Map();
-        let folder = null,
+        const psuedoFolders: Map<string, TaskFolder> = new Map();
+        // what is this?
+        const taskFiles: Map<string, TaskFile> = new Map();
+        let psuedoFolder = null,
             ltfolder = null;
-        let taskFile = null;
+
         const groupSeparator = configuration.get<string>("groupSeparator") || "-";
+
+        const bookmarksFolder = new TaskFolder("Bookmarks");
+        psuedoFolders.set("Bookmarks", bookmarksFolder);
 
         //
         // The 'Last Tasks' folder will be 1st in the tree
@@ -1347,10 +1362,13 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             if (lastTasks && lastTasks.length > 0)
             {
                 ltfolder = new TaskFolder(this.lastTasksText);
-                folders.set(this.lastTasksText, ltfolder);
+                psuedoFolders.set(this.lastTasksText, ltfolder);
             }
         }
 
+        // TODO: mine - not sure why the forEach, it's an array not a Map
+        // this whole loop is for whether or not to create a new TaskItem
+        // end mine
         //
         // Loop through each task provided by the engine and build a task tree
         //
@@ -1362,6 +1380,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             util.logValue("   name", each.name, 2);
             util.logValue("   source", each.source, 2);
 
+            // only add tasks if the "enableSource" setting is true
             let settingName: string = "enable" + util.properCase(each.source);
             if (settingName === "enableApp-publisher") {
                 settingName = "enableAppPublisher";
@@ -1369,11 +1388,13 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 
             if (configuration.get(settingName) && this.isWorkspaceFolder(each.scope) && !this.isInstallTask(each))
             {
-                folder = folders.get(each.scope.name);
-                if (!folder)
+                // TODO: mine
+                // Can this folder be set differently?
+                psuedoFolder = psuedoFolders.get(each.scope.name);
+                if (!psuedoFolder)
                 {
-                    folder = new TaskFolder(each.scope);
-                    folders.set(each.scope.name, folder);
+                    psuedoFolder = new TaskFolder(each.scope);
+                    psuedoFolders.set(each.scope.name, psuedoFolder);
                 }
                 const definition: TaskDefinition = each.definition;
                 let relativePath = definition.path ? definition.path : "";
@@ -1406,6 +1427,10 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                     }
                 }
 
+                // TODO: mine
+                // does the colon in the id mess with potential colons in the script name?
+                // if it does, we should use a generated name/id from a hash or something else
+                // end mine
                 //
                 // Create an id so group tasks together with
                 //
@@ -1424,16 +1449,16 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                 util.logValue("   relative Path", relativePath, 2);
                 this.logTaskDefinition(definition);
 
-                taskFile = files.get(id);
+                let taskFile = taskFiles.get(id);
 
                 //
                 // Create taskfile node if needed
                 //
                 if (!taskFile)
                 {
-                    taskFile = new TaskFile(this.extensionContext, folder, definition, each.source, relativePath);
-                    folder.addTaskFile(taskFile);
-                    files.set(id, taskFile);
+                    taskFile = new TaskFile(this.extensionContext, psuedoFolder, definition, each.source, relativePath);
+                    psuedoFolder.addTaskFile(taskFile);
+                    taskFiles.set(id, taskFile);
                     util.logValue("   Added source file container", each.source);
                 }
 
@@ -1470,13 +1495,14 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
         //
         const subfolders: Map<string, TaskFile> = new Map();
 
-        folders.forEach((folder, key) =>
+        // TODO: mine - this is a forEach because it's a Map, not an array
+        psuedoFolders.forEach((psuedoFolder, key) =>
         {
             if (key === this.lastTasksText) {
                 return; // continue forEach()
             }
 
-            folder.taskFiles.forEach(each =>
+            psuedoFolder.taskFiles.forEach(each =>
             {
                 if (each instanceof TaskFile)
                 {
@@ -1487,7 +1513,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                 }
             });
 
-            folder.taskFiles.sort((a, b) =>
+            psuedoFolder.taskFiles.sort((a, b) =>
             {
                 return a.taskSource.localeCompare(b.taskSource);
             });
@@ -1496,7 +1522,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             // Create groupings by task type
             //
             let prevTaskFile: TaskItem | TaskFile;
-            folder.taskFiles.forEach(each =>
+            psuedoFolder.taskFiles.forEach(each =>
             {
                 if (!(each instanceof TaskFile)) {
                     return; // continue forEach()
@@ -1504,13 +1530,13 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 
                 if (prevTaskFile && prevTaskFile.taskSource === each.taskSource)
                 {
-                    const id = folder.label + each.taskSource;
+                    const id = psuedoFolder.label + each.taskSource;
                     let subfolder: TaskFile = subfolders.get(id);
                     if (!subfolder)
                     {
-                        subfolder = new TaskFile(this.extensionContext, folder, (each.scripts[0] as TaskItem).task.definition, each.taskSource, each.path, true);
+                        subfolder = new TaskFile(this.extensionContext, psuedoFolder, (each.scripts[0] as TaskItem).task.definition, each.taskSource, each.path, true);
                         subfolders.set(id, subfolder);
-                        folder.addTaskFile(subfolder);
+                        psuedoFolder.addTaskFile(subfolder);
                         subfolder.addScript(prevTaskFile);
                     }
                     subfolder.addScript(each);
@@ -1543,7 +1569,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
 
                     each.scripts.forEach(each2 =>
                     {
-                        let id = folder.label + each.taskSource;
+                        let id = psuedoFolder.label + each.taskSource;
                         let subfolder: TaskFile;
                         const prevNameThis = each2.label.split(groupSeparator);
                         if (prevName && prevName.length > 1 && prevName[0] && prevNameThis.length > 1 && prevName[0] === prevNameThis[0])
@@ -1559,7 +1585,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                                 // add them after we loop since we are looping on the array that they need to be
                                 // added to
                                 //
-                                subfolder = new TaskFile(this.extensionContext, folder, (each2 as TaskItem).task.definition,
+                                subfolder = new TaskFile(this.extensionContext, psuedoFolder, (each2 as TaskItem).task.definition,
                                                          each.taskSource, (each2 as TaskItem).taskFile.path, true, prevName[0]);
                                 subfolders.set(id, subfolder);
                                 subfolder.addScript(prevTaskItem);
@@ -1594,7 +1620,7 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                 {
                     if (each2.label.split(groupSeparator).length > 1 && each2.label.split(groupSeparator)[0])
                     {
-                        const id = folder.label + each.taskSource + each2.label.split(groupSeparator)[0];
+                        const id = psuedoFolder.label + each.taskSource + each2.label.split(groupSeparator)[0];
                         if (subfolders.get(id))
                         {
                             taskTypesRmv2.push(each2);
@@ -1607,13 +1633,13 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
                 });
             }
             const taskTypesRmv: TaskFile[] = [];
-            folder.taskFiles.forEach(each =>
+            psuedoFolder.taskFiles.forEach(each =>
             {
                 if (!(each instanceof TaskFile)) {
                     return; // continue forEach()
                 }
 
-                const id = folder.label + each.taskSource;
+                const id = psuedoFolder.label + each.taskSource;
                 if (!each.isGroup && subfolders.get(id))
                 {
                     taskTypesRmv.push(each);
@@ -1632,14 +1658,14 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             });
             taskTypesRmv.forEach(each =>
             {
-                folder.removeTaskFile(each);
+                psuedoFolder.removeTaskFile(each);
             });
 
             //
             // For groupings with separator, now go through and rename the labels within each group minus the
             // first part of the name split by the separator character (the name of the new grouped-with-separator node)
             //
-            folder.taskFiles.forEach(each =>
+            psuedoFolder.taskFiles.forEach(each =>
             {
                 if (!(each instanceof TaskFile)) {
                     return; // continue forEach()
@@ -1663,11 +1689,11 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             //
             // Resort after making adds/removes
             //
-            folder.taskFiles.sort((a, b) =>
+            psuedoFolder.taskFiles.sort((a, b) =>
             {
                 return a.taskSource.localeCompare(b.taskSource);
             });
-            folder.taskFiles.forEach(each =>
+            psuedoFolder.taskFiles.forEach(each =>
             {
                 if (!(each instanceof TaskFile)) {
                     return; // continue forEach()
@@ -1695,6 +1721,6 @@ export class TaskTreeDataProvider implements TreeDataProvider<TreeItem>
             });
         }
 
-        return [...folders.values()];
+        return [...psuedoFolders.values()];
     }
 }

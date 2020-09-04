@@ -1,10 +1,12 @@
 
 import {
     Task, TaskExecution, ThemeIcon, TreeItem, TreeItemCollapsibleState, WorkspaceFolder,
-    TaskDefinition, ExtensionContext, tasks, Uri
+    TaskDefinition, ExtensionContext, tasks, Uri, TaskRevealKind, TaskPanelKind
 } from "vscode";
 import * as path from "path";
 import * as util from "./util";
+
+// TODO: trying to understand the difference between these three types of TreeItems
 
 export class TaskItem extends TreeItem
 {
@@ -35,6 +37,18 @@ export class TaskItem extends TreeItem
         this.contextValue = "script";
         this.taskFile = taskFile;
         this.task = task;
+
+        task.presentationOptions.focus = false;
+        // task.presentationOptions = {
+        //     showReuseMessage: false,
+        //     clear: true,
+        //     echo: false,
+        //     focus: false,
+        //     reveal: TaskRevealKind.Silent,
+        //     panel: TaskPanelKind.Shared,
+        // };
+
+
         this.command = {
             title: "Open definition",
             command: "taskExplorer.open",
@@ -268,6 +282,8 @@ export class TaskFile extends TreeItem
     }
 }
 
+// TODO: I think this is just a folder for holding actual tasks, ie workspace folders, psuedoFolders...
+// holds taskFiles and taskFolders, looks like there will just be one workspaceFolder
 export class TaskFolder extends TreeItem
 {
     public taskFiles: (TaskFile|TaskItem)[] = [];
